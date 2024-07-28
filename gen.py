@@ -10,7 +10,7 @@ import os
 import csv
 import argparse
 
-def main(data_path, model_save_path, input_directory, results_file, num_gpus):
+def main(data_path, model_save_path, input_directory, results_file):
     # Load dataset
     df = pd.read_csv(data_path)
 
@@ -48,8 +48,7 @@ def main(data_path, model_save_path, input_directory, results_file, num_gpus):
         logging_steps=10,
         evaluation_strategy="epoch",     # Use "evaluation_strategy" instead of "eval_strategy"
         fp16=True,                       # Enable mixed precision training
-        dataloader_num_workers=4,        # Number of workers for data loading
-        n_gpu=num_gpus                   # Number of GPUs to be used
+        dataloader_num_workers=4         # Number of workers for data loading
     )
 
     # Define accuracy metric
@@ -109,8 +108,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_save_path", type=str, required=True, help="Path to save the trained model.")
     parser.add_argument("--input_directory", type=str, required=True, help="Directory containing the text files for prediction.")
     parser.add_argument("--results_file", type=str, required=True, help="Path to save the prediction results as a CSV file.")
-    parser.add_argument("--num_gpus", type=int, default=1, help="Number of GPUs to be used for training.")
 
     args = parser.parse_args()
 
-    main(args.data_path, args.model_save_path, args.input_directory, args.results_file, args.num_gpus)
+    main(args.data_path, args.model_save_path, args.input_directory, args.results_file)
