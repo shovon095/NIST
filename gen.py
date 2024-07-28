@@ -33,8 +33,9 @@ def main(data_path, model_save_path, input_directory, results_file):
     train_data = Dataset.from_pandas(pd.DataFrame({'text': train_texts, 'label': train_labels}))
     val_data = Dataset.from_pandas(pd.DataFrame({'text': val_texts, 'label': val_labels}))
 
-    train_data = train_data.map(tokenize_function, batched=True)
-    val_data = val_data.map(tokenize_function, batched=True)
+    # Map with batched processing and multiprocessing
+    train_data = train_data.map(tokenize_function, batched=True, num_proc=4)
+    val_data = val_data.map(tokenize_function, batched=True, num_proc=4)
 
     # Define training arguments
     training_args = TrainingArguments(
@@ -51,12 +52,24 @@ def main(data_path, model_save_path, input_directory, results_file):
         dataloader_num_workers=4         # Number of workers for data loading
     )
 
-    # Define accuracy metric
-    metric = load_metric("accuracy")
+    # Load metrics
+    accuracy_metric = load_metric("accuracy")
+    precision_metric = load_metric("precision")
+    recall_metric = load_metric("recall")
+    f1_metric = load_metric("f1")
 
     def compute_metrics(p):
         preds = np.argmax(p.predictions, axis=1)
-        return metric.compute(predictions=preds, references=p.label_ids)
+        accuracy = accuracy_metric.compute(predictions=preds, references=p.label_ids)
+        precision = precision_metric.compute(predictions=preds, references=p.label_ids, average="binary")
+        recall = recall_metric.compute(predictions=preds, references=p.label_ids, average="binary")
+        f1 = f1_metric.compute(predictions=preds, references=p.label_ids, average="binary")
+        return {
+            "accuracy": accuracy["accuracy"],
+            "precision": precision["precision"],
+            "recall": recall["recall"],
+            "f1": f1["f1"]
+        }
 
     # Create Trainer instance
     trainer = Trainer(
@@ -72,7 +85,10 @@ def main(data_path, model_save_path, input_directory, results_file):
 
     # Evaluate the model
     eval_result = trainer.evaluate()
-    print("Validation Accuracy: {}".format(eval_result['eval_accuracy']))
+    print(f"Validation Accuracy: {eval_result['eval_accuracy']}")
+    print(f"Validation Precision: {eval_result['eval_precision']}")
+    print(f"Validation Recall: {eval_result['eval_recall']}")
+    print(f"Validation F1 Score: {eval_result['eval_f1']}")
 
     # Save the model
     model.save_pretrained(model_save_path)
