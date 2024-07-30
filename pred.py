@@ -25,13 +25,14 @@ def main(args):
                 content = file.read()
                 prediction = classifier(content)[0]
                 label = 'AI' if prediction['label'] == 'LABEL_1' else 'Human'
+                confidence_score = prediction['score']
                 file_number = filename.split('.')[0]
-                results.append([file_number, label])
+                results.append([file_number, label, confidence_score])
 
     # Save results to CSV
     with open(args.results_file, 'w', encoding='utf-8', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['File Number', 'Label'])
+        writer.writerow(['File Number', 'Label', 'Confidence Score'])
         writer.writerows(results)
 
     print('Results saved.')
