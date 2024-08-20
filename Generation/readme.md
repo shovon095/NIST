@@ -16,7 +16,7 @@ Customization: Allows customization of the summary based on detail level, focus 
 Requirements:
 
 Python 3.6 or higher
-The following Python libraries:
+
 openai
 os
 random
@@ -45,7 +45,9 @@ context_aware_summarization: Analyzes the context of the text and adjusts the su
 add_human_like_features: Enhances the generated summary by introducing human-like elements such as varied sentence structures and tone adjustments.
 check_with_simulated_personas: Uses different personas to detect if the summary is more likely AI-generated or human-written.
 iterative_summary_refinement: Refines the summary iteratively to make it more human-like.
-Example Input
+
+Example Input:
+
 Article Directory: The script expects articles to be placed in the specified input_directory.
 Topics File: An SGML file (topics_file) that lists the topics and associated article filenames. This file helps map articles to their respective topics.
 
@@ -75,6 +77,6 @@ Customization:
 The script is highly customizable. You can modify:
 
 User Profiles: Define different user profiles with specific tone and style preferences.
+
 Summarization Parameters: Adjust parameters like MAX_TOKENS_PER_REQUEST and MAX_WORDS_FINAL_SUMMARY to control the size and granularity of summaries.
-Error Handling
-The script includes error handling to retry summarization attempts if an error occurs. Errors are logged in error_log.txt for debugging purposes.
+
