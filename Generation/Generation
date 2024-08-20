@@ -1,0 +1,467 @@
+import openai
+import os
+import random
+import csv
+import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
+import matplotlib.pyplot as plt
+
+# Set up your OpenAI API key
+openai.api_key = 'YOUR OPENAI API KEY'
+
+MAX_TOKENS_PER_REQUEST = 2000  # Max tokens per request to avoid exceeding the context length
+MAX_WORDS_FINAL_SUMMARY = 250  # Maximum words for the final summary
+
+# Placeholder for user profiles
+user_profiles = {
+    "user1": {"tone": "optimistic", "style": "informal", "focus": "narrative"},
+    "user2": {"tone": "neutral", "style": "formal", "focus": "technical"}
+}
+
+def estimate_tokens(text):
+    """
+    Estimate the number of tokens for the given text.
+    """
+    return len(text.split())
+
+def chunk_text(text, max_tokens=MAX_TOKENS_PER_REQUEST):
+    """
+    Splits the text into smaller chunks that fit within the token limit.
+    """
+    words = text.split()
+    chunks = []
+    current_chunk = []
+    current_length = 0
+    
+    for word in words:
+        word_length = len(word.split())
+        if current_length + word_length + 1 > max_tokens:
+            chunks.append(" ".join(current_chunk))
+            current_chunk = []
+            current_length = 0
+        current_chunk.append(word)
+        current_length += word_length + 1
+    
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+    
+    return chunks
+
+def chunk_text_by_paragraphs(text, max_tokens=MAX_TOKENS_PER_REQUEST):
+    """
+    Splits the text into smaller chunks by paragraph that fit within the token limit.
+    """
+    paragraphs = text.split("\n\n")
+    chunks = []
+    current_chunk = []
+    current_length = 0
+    
+    for paragraph in paragraphs:
+        paragraph_length = estimate_tokens(paragraph)
+        if current_length + paragraph_length > max_tokens:
+            chunks.append("\n\n".join(current_chunk))
+            current_chunk = []
+            current_length = 0
+        current_chunk.append(paragraph)
+        current_length += paragraph_length
+    
+    if current_chunk:
+        chunks.append("\n\n".join(current_chunk))
+    
+    return chunks
+
+def analyze_context(text):
+    """
+    Analyze the context of the given text to determine its type.
+    """
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are an analyzer that determines the context of the following text."},
+            {"role": "user", "content": f"Please analyze and describe the context of this text:\n\n{text}"}
+        ],
+        max_tokens=100
+    )
+    return response.choices[0].message['content'].strip()
+
+def context_aware_summarization(text, engine="gpt-4o-mini"):
+    """
+    Summarize text with context-awareness based on the content's nature.
+    """
+    context = analyze_context(text)
+    if "technical" in context.lower():
+        return summarize_text(text, engine, prompt_type="technical")
+    elif "narrative" in context.lower():
+        return summarize_text(text, engine, prompt_type="narrative")
+    else:
+        return summarize_text(text, engine)
+
+def summarize_text(text, engine="gpt-4o-mini", prompt_type="default"):
+    """
+    Use OpenAI GPT-4 to summarize a given text chunk with customizable prompts.
+    """
+    if prompt_type == "technical":
+        system_message = "You are a concise and precise assistant."
+    elif prompt_type == "narrative":
+        system_message = "You are a creative and engaging assistant."
+    else:
+        system_message = "You are a helpful assistant."
+    
+    # Ensure text is within token limit
+    if estimate_tokens(text) > MAX_TOKENS_PER_REQUEST:
+        chunks = chunk_text(text, MAX_TOKENS_PER_REQUEST)
+        text = chunks[0]  # Use the first chunk for summarization
+
+    response = openai.ChatCompletion.create(
+        model=engine,
+        messages=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": f"Summarize the following text:\n\n{text}"}
+        ],
+        max_tokens=200
+    )
+    return response.choices[0].message['content'].strip()
+
+def add_human_like_features(summary):
+    """
+    Modify the summary to include more human-like features, including varied sentence structures and tone adjustments.
+    """
+    # Introduce transitions between sentences
+    transitions = ["Moreover,", "Additionally,", "In contrast,", "For example,"]
+    sentences = summary.split(". ")
+    enhanced_summary = ". ".join([random.choice(transitions) + " " + sentence if i % 2 == 0 else sentence for i, sentence in enumerate(sentences)])
+    
+    # Vary sentence length and structure
+    enhanced_summary = ". ".join([sentence.capitalize() if random.random() < 0.5 else sentence for sentence in enhanced_summary.split(". ")])
+
+    # Introduce minor informal elements or conversational tones
+    conversational_phrases = ["Let's dive into it,", "So, basically,", "To put it simply,"]
+    if random.random() < 0.2:
+        enhanced_summary = random.choice(conversational_phrases) + " " + enhanced_summary
+
+    # Add more subjective or emotional language carefully
+    emotional_phrases = ["This is fascinating because", "Surprisingly,", "It's interesting to note that"]
+    if random.random() < 0.2:
+        enhanced_summary = enhanced_summary + ". " + random.choice(emotional_phrases) + " " + sentences[0]
+
+    return enhanced_summary
+
+def enhance_and_trim_summary(summary, max_words):
+    """
+    Enhance the summary with human-like features and ensure it does not exceed the word limit.
+    """
+    enhanced_summary = add_human_like_features(summary)
+    
+    return enhanced_summary
+
+def explicit_summarize(summary, engine="gpt-4o-mini", max_words=MAX_WORDS_FINAL_SUMMARY):
+    """
+    Explicitly ask GPT to summarize the enhanced summary to a specific word count.
+    """
+    response = openai.ChatCompletion.create(
+        model=engine,
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": f"Summarize the following text to {max_words} words:\n\n{summary}"}
+        ],
+        max_tokens=max_words
+    )
+    final_summary = response.choices[0].message['content'].strip()
+
+    # Ensure the final summary ends properly
+    if not final_summary.endswith('.'):
+        final_summary = final_summary.rsplit(' ', 1)[0] + '.'
+    
+    return final_summary
+
+def remove_special_characters(summary):
+    """
+    Remove unnecessary special characters from the summary.
+    """
+    # Remove unnecessary special characters but keep those that aid readability
+    summary = summary.replace(';', ',')
+    summary = summary.replace('+', 'and')
+    
+    # Avoid over-sanitization
+    summary = summary.replace('...', '.').replace('!!', '!').replace('??', '?')
+    
+    return summary
+
+def check_with_simulated_personas(summary, personas=None):
+    """
+    Use multiple personas to check if the summary is detected as AI-generated or human-written.
+    """
+    if not personas:
+        personas = ["AI Expert", "Casual Reader", "Technical Reviewer"]
+
+    results = []
+    for persona in personas:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": f"You are a {persona}. Detect if the following summary is AI-generated or human-written."},
+                {"role": "user", "content": f"Is this summary AI-generated? Answer 'AI' or 'Human':\n\n{summary}"}
+            ]
+        )
+        results.append(response.choices[0].message['content'].strip())
+
+    return max(set(results), key=results.count)  # Return the most common result
+
+def iterative_summary_refinement(summary, max_iterations=3):
+    """
+    Iteratively refine the summary to make it more human-like.
+    """
+    for _ in range(max_iterations):
+        detection_result = check_with_simulated_personas(summary)
+        if detection_result == "Human":
+            break
+        summary = enhance_and_trim_summary(summary, MAX_WORDS_FINAL_SUMMARY)
+    return summary
+
+def customize_summary(summary, detail_level="concise", focus_area="general"):
+    """
+    Customize the summary based on user preferences for detail level and focus area.
+    """
+    if detail_level == "detailed":
+        summary += " Further analysis reveals deeper insights into the matter."
+    elif detail_level == "concise":
+        summary = "In summary: " + summary.split('.')[0] + "."
+
+    if focus_area == "technical":
+        summary += " The technical aspects are explored extensively."
+    elif focus_area == "narrative":
+        summary = "Storytelling elements make the topic engaging: " + summary
+
+    return summary
+
+def blend_summaries(summaries):
+    """
+    Blend multiple summaries to create a more diverse final output.
+    """
+    blended_summary = []
+    for i in range(max(len(s.split()) for s in summaries)):
+        for summary in summaries:
+            words = summary.split()
+            if i < len(words):
+                blended_summary.append(words[i])
+    return " ".join(blended_summary)
+
+def semantic_compression(text):
+    """
+    Compress the text semantically by removing redundant information while maintaining key points.
+    """
+    response = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a text compressor."},
+            {"role": "user", "content": f"Compress the following text by removing redundant information while maintaining the key points:\n\n{text}"}
+        ],
+        max_tokens=300
+    )
+    return response.choices[0].message['content'].strip()
+
+def adjust_tone_and_style(summary, tone="neutral", style="formal"):
+    """
+    Adjust the tone and style of the summary based on user preferences.
+    """
+    if tone == "optimistic":
+        summary = summary.replace("is", "is positively").replace("are", "are positively")
+        summary = "Exciting news! " + summary
+    elif tone == "pessimistic":
+        summary = summary.replace("is", "is unfortunately").replace("are", "are unfortunately")
+        summary = "Sadly, " + summary
+
+    if style == "informal":
+        summary = summary.replace("do not", "don't").replace("cannot", "can't")
+        summary = "Hey there, " + summary
+    elif style == "formal":
+        summary = summary.replace("don't", "do not").replace("can't", "cannot")
+        summary = "Please note that " + summary
+
+    return summary
+
+
+def personalize_summary(summary, user_id):
+    """
+    Personalize the summary based on user profiles.
+    """
+    profile = user_profiles.get(user_id, {})
+    if profile.get("tone"):
+        summary = adjust_tone_and_style(summary, tone=profile["tone"], style=profile.get("style", "formal"))
+    if profile.get("focus"):
+        summary = customize_summary(summary, focus_area=profile["focus"])
+    return summary
+
+def summarize_articles(article_contents, engine="gpt-4o-mini"):
+    """
+    Use OpenAI GPT-4 to summarize multiple articles with added human-like features.
+    """
+    combined_content = "\n\n".join(article_contents)
+    combined_content = semantic_compression(combined_content)
+    
+    # Chunk the content to fit within the token limit
+    if estimate_tokens(combined_content) > MAX_TOKENS_PER_REQUEST:
+        chunks = chunk_text_by_paragraphs(combined_content)
+    else:
+        chunks = [combined_content]
+    
+    summaries = []
+    for chunk in chunks:
+        summary = context_aware_summarization(chunk, engine)
+        summaries.append(summary)
+    
+    combined_summary = blend_summaries(summaries)
+    
+    # Summarize the combined summary to ensure it is within the word limit
+    final_summary = iterative_summary_refinement(combined_summary)
+    
+    return final_summary
+
+def visualize_summary(summary):
+    """
+    Generate a visual representation of the summary.
+    """
+    sentences = summary.split('. ')
+    fig, ax = plt.subplots()
+    ax.barh(range(len(sentences)), [len(sentence) for sentence in sentences], align='center')
+    ax.set_yticks(range(len(sentences)))
+    ax.set_yticklabels(sentences)
+    ax.invert_yaxis()  # labels read top-to-bottom
+    ax.set_xlabel('Length of Sentence')
+    ax.set_title('Visual Representation of Summary')
+    plt.show()
+
+def collect_user_feedback(summary, user_feedback):
+    """
+    Collect and log user feedback for continuous improvement.
+    """
+    with open('feedback_log.csv', 'a') as f:
+        writer = csv.writer(f)
+        writer.writerow([summary, user_feedback])
+    # Use this data to fine-tune future summarizations
+
+def batch_summarize(articles, engine="gpt-4o-mini"):
+    """
+    Batch process articles for summarization.
+    """
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        summaries = list(executor.map(lambda article: summarize_text(article, engine), articles))
+    return summaries
+
+def summarize_with_retries(text, max_retries=3):
+    """
+    Summarize text with retries in case of errors.
+    """
+    attempts = 0
+    while attempts < max_retries:
+        try:
+            return summarize_text(text)
+        except Exception as e:
+            attempts += 1
+            with open('error_log.txt', 'a') as log:
+                log.write(f"Error during summarization attempt {attempts} for text chunk: {text[:200]}... Error: {e}\n")
+            print(f"Error summarizing text: {e}. Attempt {attempts}/{max_retries}")
+    return "Failed to generate a summary after multiple attempts."
+
+def parse_topics_file(topics_file):
+    """
+    Parse the topics file to map articles to topics.
+    """
+    with open(topics_file, 'r', encoding='utf-8') as file:
+        content = file.read()
+
+    # Wrap the content in a single root element
+    wrapped_content = f"<root>\n{content}\n</root>"
+    
+    tree = ET.ElementTree(ET.fromstring(wrapped_content))
+    root = tree.getroot()
+    
+    topics = {}
+    for topic in root.findall('topic'):
+        topic_id = topic.find('num').text.strip()
+        articles = topic.find('docs').text.split()
+        topics[topic_id] = articles
+    
+    return topics
+
+def process_and_save_summaries(input_directory, output_directory, results_file, topics_file):
+    """
+    Process all articles by topics, generate summaries with human-like features,
+    save summaries in another directory, and save GPT-3.5 results to a CSV file.
+    """
+    results = []
+    root_element = ET.Element("GeneratorResults", teamName="PV-Credit")
+
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+
+    topics = parse_topics_file(topics_file)
+
+    for topic_id, article_filenames in topics.items():
+        article_contents = []
+
+        for filename in article_filenames:
+            article_path = os.path.join(input_directory, filename)
+            if os.path.exists(article_path):
+                with open(article_path, 'r', encoding='utf-8') as file:
+                    article_contents.append(file.read())
+            else:
+                print(f"File not found: {article_path}")
+
+        if not article_contents:
+            print(f"No articles found for topic {topic_id}.")
+            continue
+
+        attempts = 0
+        human_like_summary = ""
+        detection_result = "AI"  # Initialize with a default value
+
+        while attempts < 3:
+            attempts += 1
+            try:
+                summary = summarize_articles(article_contents)
+                human_like_summary = enhance_and_trim_summary(summary, MAX_WORDS_FINAL_SUMMARY)
+                human_like_summary = remove_special_characters(human_like_summary)
+                
+                # Print attempt number and generated summary
+                print(f"Attempt {attempts} for topic {topic_id}: {human_like_summary}")
+
+                # Check summary with simulated personas
+                detection_result = check_with_simulated_personas(human_like_summary)
+
+                if detection_result == "Human":
+                    break
+            except Exception as e:
+                print(f"Error during summarization attempt {attempts} for topic {topic_id}: {e}")
+                continue
+
+        # Explicitly summarize to the final word limit
+        human_like_summary = explicit_summarize(human_like_summary)
+
+        results.append([topic_id, detection_result])
+
+        # Add summary to XML structure
+        run_result_element = ET.SubElement(root_element, "GeneratorRunResult", trainingData="No training data used", version="1.0", priority="1", trained="F", desc="Generated summary", link="https://github.com/PV-Credit/ModelRepo")
+        topic_result_element = ET.SubElement(run_result_element, "GeneratorTopicResult", topic=topic_id, elapsedTime="5")
+        topic_result_element.text = human_like_summary
+
+    # Save XML
+    tree = ET.ElementTree(root_element)
+    xml_output_path = os.path.join(output_directory, "summaries.xml")
+    tree.write(xml_output_path, encoding='ISO-8859-1', xml_declaration=True)
+
+    # Save GPT-3.5 results to CSV
+    with open(results_file, 'w', encoding='utf-8', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['TopicID', 'Detection'])
+        writer.writerows(results)
+
+# Main execution
+input_directory = "C:/Users/shouv/Desktop/Research/NIST/GenAI24-NIST-pilot-T2T-G-set-1/GenAI24-NIST-pilot-T2T-G-set-1/files/"
+output_directory = 'C:/Users/shouv/Desktop/Research/NIST/GenAI24-NIST-pilot-T2T-G-set-1/GenAI24-NIST-pilot-T2T-G-set-1/Summaries/'
+results_file = 'C:/Users/shouv/Desktop/Research/NIST/GenAI24-NIST-pilot-T2T-G-set-1/GenAI24-NIST-pilot-T2T-G-set-1/gpt_35_results.csv'
+topics_file = 'C:/Users/shouv/Desktop/Research/NIST/GenAI24-NIST-pilot-T2T-G-set-1/GenAI24-NIST-pilot-T2T-G-set-1/GenAI24-NIST-pilot-T2T-G-set-1_topics.sgml'
+
+process_and_save_summaries(input_directory, output_directory, results_file, topics_file)
+
+print("Summaries and GPT-3.5 results saved.")
