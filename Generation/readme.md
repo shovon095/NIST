@@ -17,13 +17,13 @@ Requirements:
 
 Python 3.6 or higher
 
-openai
-os
-random
-csv
-xml.etree.ElementTree
-concurrent.futures
-matplotlib
+openai;
+os;
+random;
+csv;
+xml.etree.ElementTree;
+concurrent.futures;
+matplotlib;
 
 Set Up OpenAI API Key:
 
