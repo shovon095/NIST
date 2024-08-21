@@ -15,6 +15,25 @@ gen_multi.py trains a RoBERTa model for text classification using distributed da
 - **`output_directory`**: Path to the directory where results will be saved.
 - **`results_file`**: Path to save the CSV file with prediction results.
 
+## **Usage gen_multi.py**
+
+## Requirements:
+
+- Python 3.x
+- PyTorch
+- Transformers (Hugging Face)
+- Datasets
+- scikit-learn
+- pandas
+- argparse
+- Distributed Data Parallel (DDP) setup with `torch.distributed`
+
+## Installation:
+
+```bash
+pip install torch transformers datasets scikit-learn pandas argparse evaluate
+
+
 ### Execution
 
 1. **Initial Training**: The script first performs initial training on a small manually labeled dataset.
@@ -32,30 +51,3 @@ initial_training()
 active_learning_loop_bert_roberta(input_directory, output_directory, results_file)
 
 print("Results saved.")
-`` ` ``
-
-`` ` ``
-## **Usage gen_multi.py**
-
-### Overview
-
-This script is used to generate multiple text samples in a single run using a pre-trained model.
-
-### File Paths
-
-- **`input_prompts`**: Path to a text file containing prompts, each on a new line.
-
-### Execution
-
-1. **Text Generation**: The script processes multiple input prompts from the file and generates corresponding text outputs.
-
-### Usage
-
-```python
-input_prompts = "/path/to/prompts.txt"
-
-
-# Run the text generation script
-python gen_multi.py --input_prompts=input_prompts
-
-`` ` ``
