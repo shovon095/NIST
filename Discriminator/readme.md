@@ -30,11 +30,17 @@ active_learning_loop_bert_roberta(input_directory, output_directory, results_fil
 
 print("Results saved.")
 
+
+
+
+
 # Distributed RoBERTa Training and Prediction Pipeline
+
+## Overview
 
 This project involves training a RoBERTa model for text classification using distributed data parallel (DDP) training across multiple GPUs. After training, the model is used to classify text files as belonging to one of the predefined classes (e.g., AI-generated or human-written). The script handles everything from data preprocessing to model training, evaluation, and prediction on new data.
 
-## Requirements:
+## Requirements
 
 - Python 3.x
 - PyTorch
@@ -45,9 +51,7 @@ This project involves training a RoBERTa model for text classification using dis
 - argparse
 - Distributed Data Parallel (DDP) setup with `torch.distributed`
 
-## Installation:
+## Installation
 
 ```bash
 pip install torch transformers datasets scikit-learn pandas argparse evaluate
-
-
