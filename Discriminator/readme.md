@@ -39,7 +39,7 @@ pip install torch transformers datasets scikit-learn pandas argparse evaluate
 1. **Initial Training**: The script first performs initial training on a small manually labeled dataset.
 2. **Active Learning Loop**: The script then enters an active learning loop, where it uses the trained models to make predictions on new text files, fine-tunes the models with high-confidence predictions, and iterates this process.
 
-### Usage 
+### Usage active learning.ipynb
 
 ```python
 input_directory = "/path/to/text/files/"
@@ -51,3 +51,7 @@ initial_training()
 active_learning_loop_bert_roberta(input_directory, output_directory, results_file)
 
 print("Results saved.")
+
+### Usage gen_multi.py
+python gen_multi.py --data_path /path/to/dataset.csv --model_save_path /path/to/save/model --input_directory /path/to/text/files --results_file /path/to/save/results.csv
+
