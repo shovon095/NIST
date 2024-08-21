@@ -46,3 +46,10 @@ python -m torch.distributed.launch --nproc_per_node=2 script_name.py --data_path
 Output<br/>
 Model: The trained RoBERTa model is saved to the specified directory.<br/>
 Results: A CSV file with predictions and confidence scores is generated.<br/>
+
+Usage of Pred.py<br/>
+This script loads a trained RoBERTa model to classify text files as either AI-generated or human-written. The results are saved to a CSV file.<br/>
+
+python script_name.py --model_save_path /path/to/model --input_directory /path/to/text/files --results_file /path/to/save/results.csv<br/>
+Output<br/>
+Results: A CSV file containing the file number and the predicted label (AI or Human).<br/>
