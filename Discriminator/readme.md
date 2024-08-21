@@ -1,4 +1,4 @@
-# BERT and RoBERTa Active Learning for Text Classification
+# Active Learning and Fine-tuning BERT and Roberta for Text Classification
 
 ## Overview
 
@@ -28,14 +28,13 @@ results_file = "/path/to/save/results.csv"
 initial_training()
 active_learning_loop_bert_roberta(input_directory, output_directory, results_file)
 
-print("Results saved.")
+print("Results saved.") <br/>
 
 
 
 
 
-# Distributed RoBERTa Training and Prediction Pipeline
-
+## Distributed RoBERTa Training and Prediction Pipeline
 ## Overview
 
 This project involves training a RoBERTa model for text classification using distributed data parallel (DDP) training across multiple GPUs. After training, the model is used to classify text files as belonging to one of the predefined classes (e.g., AI-generated or human-written). The script handles everything from data preprocessing to model training, evaluation, and prediction on new data.
