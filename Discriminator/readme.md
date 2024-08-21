@@ -6,7 +6,7 @@ Active learning.ipynb script performs active learning using BERT and RoBERTa mod
 gen_multi.py trains a RoBERTa model for text classification using distributed data parallel (DDP) training across multiple GPUs. After training, the model is used to classify text files as belonging to one of the predefined classes (e.g., AI-generated or human-written). The script handles everything from data preprocessing to model training, evaluation, and prediction on new data.
 
 
-## Usage Active learning.ipynb 
+## **Usage Active learning.ipynb**
 
 ### File Paths
 
@@ -32,18 +32,26 @@ active_learning_loop_bert_roberta(input_directory, output_directory, results_fil
 
 print("Results saved.")
 
-**### Usage gen_multi.py**
 
-- Python 3.x
-- PyTorch
-- Transformers (Hugging Face)
-- Datasets
-- scikit-learn
-- pandas
-- argparse
-- Distributed Data Parallel (DDP) setup with `torch.distributed`
+## **Usage gen_multi.py**
 
-**## Installation**
+### Overview
 
-```bash
-pip install torch transformers datasets scikit-learn pandas argparse evaluate
+This script is used to generate multiple text samples in a single run using a pre-trained model.
+
+### File Paths
+
+- **`input_prompts`**: Path to a text file containing prompts, each on a new line.
+
+### Execution
+
+1. **Text Generation**: The script processes multiple input prompts from the file and generates corresponding text outputs.
+
+### Usage
+
+```python
+input_prompts = "/path/to/prompts.txt"
+
+# Run the text generation script
+python gen_multi.py --input_prompts=input_prompts
+
